@@ -10,5 +10,6 @@ for(const [path,minSize] of [
 ]){
   if(!existsSync(path)||statSync(path).size<minSize)throw new Error('Required original or V3 motion asset missing: '+path);
 }
-copyFileSync('walk_to_the_bank.mp3','public/walk_to_the_bank.mp3');
+const source='walk_to_the_bank.mp3',destination='public/walk_to_the_bank.mp3';
+copyFileSync(source,destination);
 console.log('Original audio, original photograph, real motion plate and immutable guard are bundled locally.');
