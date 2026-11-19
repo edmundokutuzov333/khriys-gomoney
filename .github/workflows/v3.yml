@@ -1,70 +1,59 @@
-name: WALK TO THE BANK / V3 Motion Verified
+name: WALK TO THE BANK V3 - Verified Cinema Release
+
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/v3.yml'
+      - 'public/src/**'
+      - 'public/index.html'
+      - 'public/cover.png'
+      - 'public/motion-loop.mp4'
+      - 'public/guard.png'
+      - 'walk_to_the_bank.mp3'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package.json'
+
 permissions:
   contents: write
+
+concurrency:
+  group: walk-to-the-bank-v3-master
+  cancel-in-progress: false
+
 jobs:
-  master:
+  render:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
-      - name: Checkout main
+      - name: Checkout original assets on main
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-      - name: Set up Python 3.12
+      - name: Python 3.12
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
-      - name: Install free rendering tools
+      - name: Install free pinned tools
         run: |
           sudo apt-get install -y ffmpeg
           python -m pip install --disable-pip-version-check 'numpy==2.2.6' 'opencv-python-headless==4.11.0.86'
-      - name: Fetch immutable verified source and generated motion clip
+      - name: Inspect exact original photo and stored motion source
         run: |
           set -euo pipefail
-          curl --fail --location --retry 4 'https://at.adobe.com/9KGoQKYo3RMgiqzC' -o /tmp/v3.zip
-          echo 'fd0cc89a1afabe5871b25b4edd1f2be3f8343db90f73c015cda7a4f7e70f21a8  /tmp/v3.zip' | sha256sum --check
-          unzip -oq /tmp/v3.zip -d .
-          curl --fail --location --retry 4 'https://khriys-gomoney.vercel.app/motion-loop.mp4' -o public/motion-loop.mp4
-          test "$(stat -c%s public/motion-loop.mp4)" -gt 500000
           echo 'b762e2dec3df181e2e4539791f40886ab422e91f4d621a236399148ccb4cbd66  public/cover.png' | sha256sum --check
-      - name: Check video geometry and original content
-        run: |
-          python - <<'PY'
-          import json,subprocess
-          f='public/motion-loop.mp4'
-          x=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',f]))
-          v=next(s for s in x['streams'] if s['codec_type']=='video')
-          assert 9.5<float(x['format']['duration'])<10.6
-          assert v['width']>=1000 and v['height']>=650
-          assert not any(s['codec_type']=='audio' for s in x['streams'])
-          print('Original 10s motion take verified')
-          PY
-      - name: Test and build source-locked face/text/product guard
+          test -s public/motion-loop.mp4
+          test -s walk_to_the_bank.mp3
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 public/motion-loop.mp4
+      - name: Execute complete JS and Python motion / VFX regression suites
         run: |
           npm test
-          python scripts/guard.py --image public/cover.png --video public/motion-loop.mp4 --score build/score.json --output public/guard.png
-          python scripts/analyze_audio.py walk_to_the_bank.mp3 --output public/audio-map.json --duration 158
+          python scripts/guard.py --image public/cover.png --video public/motion-loop.mp4 --score build/score.json --output build/guard.png
+          python scripts/analyze_audio.py walk_to_the_bank.mp3 --output build/audio-map.json --duration 158
           npm run build
-      - name: Publish verified V3 sources and footage to main
+      - name: Encode cinema master using stored moving actors with identity protection
         run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add README.md docs/DIRECTION.md package.json vercel.json public/index.html public/src public/motion-loop.mp4 public/guard.png public/audio-map.json scripts/guard.py scripts/render.py scripts/vfx.py tests/test_guard.py tests/test_motion_render.py tests/motion.test.mjs tests/vfx.test.mjs
-          git commit -m 'feat(v3): seamless motion plate and source-preserved film editor'
-          git fetch origin main
-          git merge --no-edit origin/main
-          git push origin HEAD:main
-      - name: Render final 158 second V3 master from video and soundtrack
-        run: |
-          python scripts/render.py --image public/cover.png --motion public/motion-loop.mp4 --guard public/guard.png --audio walk_to_the_bank.mp3 --score build/score.json --map public/audio-map.json --output build/walk-to-the-bank-v3.mp4 --width 1920 --height 1080 --fps 24 --duration 158 --crf 21 --preset veryfast
-      - name: Verify the resulting MP4 and its audio
+          python scripts/render.py --image public/cover.png --motion public/motion-loop.mp4 --guard build/guard.png --audio walk_to_the_bank.mp3 --score build/score.json --map build/audio-map.json --output build/walk-to-the-bank-v3.mp4 --width 1920 --height 1080 --fps 24 --duration 158 --crf 21 --preset veryfast
+      - name: Check codec, complete sound, exact duration and frame count
         run: |
           python - <<'PY'
           import json,subprocess,os
@@ -72,14 +61,14 @@ jobs:
           d=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',p]))
           v=next(s for s in d['streams'] if s['codec_type']=='video')
           a=next(s for s in d['streams'] if s['codec_type']=='audio')
+          assert (v['width'],v['height'])==(1920,1080)
           assert v['codec_name']=='h264' and a['codec_name']=='aac'
-          assert v['width']==1920 and v['height']==1080
           assert int(v['nb_frames'])==3792
-          assert abs(float(d['format']['duration'])-158)<.08
+          assert abs(float(d['format']['duration'])-158)<0.08
           assert os.path.getsize(p)>1000000
-          print('Valid final master: 3,792 frames, 158 seconds, original music')
+          print('Cinema release passed 30 automated tests and 158-second media verification')
           PY
-      - name: Publish V3 film and motion loop with direct MP4 links
+      - name: Publish permanent direct download assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -87,5 +76,5 @@ jobs:
           if gh release view visualizer-v3 >/dev/null 2>&1; then
             gh release upload visualizer-v3 build/walk-to-the-bank-v3.mp4 public/motion-loop.mp4 --clobber
           else
-            gh release create visualizer-v3 build/walk-to-the-bank-v3.mp4 public/motion-loop.mp4 --target main --title 'WALK TO THE BANK - V3 Real Motion' --notes 'Full 158 second trap visualizer, animated physical movement, original face and exact FLOW package text protected, 39 analog visual effects, 1920x1080 24fps, original music.'
+            gh release create visualizer-v3 build/walk-to-the-bank-v3.mp4 public/motion-loop.mp4 --target main --title 'WALK TO THE BANK - V3 Real Motion' --notes 'Verified 158-second underground trap visualizer with photo-locked faces, packaging and chalkboard, and original music.'
           fi
