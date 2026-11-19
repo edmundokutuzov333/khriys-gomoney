@@ -39,7 +39,7 @@ scripts/
   render.py              OpenCV full-frame editor → FFmpeg H.264/AAC
   prepare.mjs            deterministic MP3 handoff into static directory
 .github/workflows/
-  bootstrap.yml          test → source verify → render → ffprobe → GitHub Release
+  release.yml            test → source verify → render → ffprobe → GitHub Release
 ```
 
 ## Development

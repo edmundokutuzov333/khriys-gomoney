@@ -42,18 +42,19 @@ export function energySection(time) {
   if(time < 146) return 1;
   return .42;
 }
-/** Stable coordinates; zoom & translation move the entire immutable photograph, never faces. */
+/** Inertial hand-held camera. No mesh operations on protected photographic identity. */
 export function scoreAt(time, bass=0, beat=0) {
   const t=clamp(time,0,DURATION), i=cueIndex(t), curr=CUES[i], next=CUES[Math.min(i+1,CUES.length-1)];
   const span=Math.max(1,next.at-curr.at), progress=clamp((t-curr.at)/span,0,1);
   const drift=smoothstep(progress) * .075;
   const intensity=energySection(t), pulse=clamp(beat*.70 + bass*.3,0,1);
-  const micro=.0030*Math.sin(t*.39+i*1.3);
+  const impact=pulse*pulse;
+  const micro=.0030*Math.sin(t*.39+i*1.3)+.008*impact*Math.sin(t*24.2+i);
   return {
     time:t, cue:i, cueName:curr.name, intensity,
     x:clamp(lerp(curr.x,next.x,drift)+micro,.12,.90),
-    y:clamp(lerp(curr.y,next.y,drift)+.0025*Math.sin(t*.27+i),.12,.86),
-    zoom:clamp(curr.z+.010*progress+.013*pulse,1,1.75),
+    y:clamp(lerp(curr.y,next.y,drift)+.0025*Math.sin(t*.27+i)+.005*impact*Math.cos(t*24.2+i),.12,.86),
+    zoom:clamp(curr.z+.010*progress+.035*pulse,1,1.75),
     pulse,
     blackout: t<.22 ? 1-t/.22 : t > 156.3 ? clamp((t-156.3)/1.7,0,1) : 0,
     flash: (t>41 && t<146 && pulse>.88) ? Math.min(.18,(pulse-.88)*1.35) : 0,

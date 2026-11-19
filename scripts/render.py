@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Produce a full-duration, film-graded 24fps H.264 master from the exact source photograph.
+"""Export a frame-accurate 02:38 VFX master from immutable original photography.
 
-No generative face animation. Full-image crop/zoom only; all VFX are optical overlays.
+Shared motion/effects score drives Canvas and CPU-only optical compositor.
+Faces, board typography, FLOW pack always avoid spatial displacement.
 """
 from __future__ import annotations
 import argparse
@@ -11,6 +12,7 @@ import subprocess
 from pathlib import Path
 import cv2
 import numpy as np
+from vfx import OpticalVFX
 
 
 def clamp(x: float, lo: float, hi: float) -> float:
@@ -43,10 +45,11 @@ def shot_at(cues: list[dict], t: float, cue_index: int, pulse: float) -> tuple[f
     nxt = cues[min(cue_index+1, len(cues)-1)]
     progress = clamp((t-curr['at']) / max(1, nxt['at']-curr['at']),0,1)
     drift = smoothstep(progress) * .075
-    jitter = .0030*math.sin(t*.39+cue_index*1.3)
+    impact=pulse*pulse
+    jitter = .0030*math.sin(t*.39+cue_index*1.3)+.008*impact*math.sin(t*24.2+cue_index)
     x = clamp(curr['x']+(nxt['x']-curr['x'])*drift+jitter,.12,.90)
-    y = clamp(curr['y']+(nxt['y']-curr['y'])*drift+.0025*math.sin(t*.27+cue_index),.12,.86)
-    zoom = clamp(curr['z']+.010*progress+.013*pulse,1,1.75)
+    y = clamp(curr['y']+(nxt['y']-curr['y'])*drift+.0025*math.sin(t*.27+cue_index)+.005*impact*math.cos(t*24.2+cue_index),.12,.86)
+    zoom = clamp(curr['z']+.010*progress+.035*pulse,1,1.75)
     blackout = 1-t/.22 if t<.22 else clamp((t-156.3)/1.7,0,1) if t>156.3 else 0
     return x,y,zoom,blackout,section(t)
 
@@ -66,7 +69,7 @@ def render(args: argparse.Namespace) -> None:
     frames=round(args.duration*args.fps)
     # Two-stage FFmpeg: PCM pixel frames are piped in; the original MP3 is untouched until AAC mux.
     cmd=['ffmpeg','-hide_banner','-loglevel','warning','-y','-f','rawvideo','-pix_fmt','bgr24',
-         '-s',f'{W}x{H}','-r',str(args.fps),'-i','-','-i',str(args.audio),
+         '-s',f'{W}x{H}','-r',str(args.fps),'-i','-','-ss',str(args.start),'-i',str(args.audio),
          '-map','0:v:0','-map','1:a:0','-c:v','libx264','-preset',args.preset,
          '-crf',str(args.crf),'-maxrate','8M','-bufsize','16M','-pix_fmt','yuv420p',
          '-color_primaries','bt709','-color_trc','bt709','-colorspace','bt709',
@@ -75,21 +78,11 @@ def render(args: argparse.Namespace) -> None:
          str(args.output)]
     args.output.parent.mkdir(parents=True, exist_ok=True)
     proc=subprocess.Popen(cmd,stdin=subprocess.PIPE)
-    vignette=np.empty((H,W,1),dtype=np.float32)
-    gx=np.linspace(-1,1,W,dtype=np.float32)[None,:]
-    gy=np.linspace(-1,1,H,dtype=np.float32)[:,None]
-    radius=np.clip((gx*gx*.58+gy*gy*.95-.17)*.48,0,.4)
-    vignette[:,:,0]=1-radius
-    rng=np.random.default_rng(2201997)
-    # Precalculate a few optical emulsion grains; fast to reuse and visually non-repeating after crops.
-    grain=[rng.normal(0,5.7,(H,W,1)).astype(np.float32) for _ in range(13)]
-    xgrad=np.linspace(0,1,W,dtype=np.float32)[None,:,None]
-    edge_blue=np.clip((.17-xgrad)/.17,0,1)*np.array([15,3,-2],dtype=np.float32).reshape(1,1,3)
-    edge_red=np.clip((xgrad-.82)/.18,0,1)*np.array([-5,-1,20],dtype=np.float32).reshape(1,1,3)
+    optics=OpticalVFX(W,H,ow,oh,json.loads(args.score.read_text()))
     cue_index=0;beat_index=-1
     try:
         for f in range(frames):
-            t=f/args.fps
+            t=args.start+f/args.fps
             while cue_index+1<len(cues) and cues[cue_index+1]['at']<=t: cue_index+=1
             while beat_index+1<len(beats) and beats[beat_index+1]<=t: beat_index+=1
             beat=pulse_at(beats,t,beat_index)
@@ -98,21 +91,11 @@ def render(args: argparse.Namespace) -> None:
             sx=clamp(x*ow-cw/2,0,ow-cw);sy=clamp(y*oh-ch/2,0,oh-ch)
             # Sampling only: no pixel synthesis, facial relighting, geometry warp or inpainting.
             frame=cv2.resize(image[int(sy):int(sy+ch),int(sx):int(sx+cw)],(W,H),interpolation=cv2.INTER_LINEAR)
-            pixels=frame.astype(np.float32,copy=False)
-            pixels=(pixels-120)*(1.105+intensity*.025)+120
-            # Almost neutral, cold shadows + original ochre/red packaging still intact.
-            pixels=pixels*np.array([1.028,.99,.975],dtype=np.float32)
-            pixels=(pixels+edge_blue+edge_red)*vignette
-            pixels+=grain[f%len(grain)]*.62
-            if intensity>.63 and (f*19%67)>63:
-                cy=int(H*((f*43%113)/113));pixels[cy:cy+2,0:int(W*.09),:]+=12
-            if t>41 and t<146 and beat>.88:
-                pixels=pixels*(1-min(.18,(beat-.88)*1.35))+220*min(.18,(beat-.88)*1.35)
-            if cue_index in (6,10,14) and t-cues[cue_index]['at']<1/args.fps:
-                pixels=pixels*.88+225*.12
-            if blackout: pixels*=1-clamp(blackout,0,1)
-            np.clip(pixels,0,255,out=pixels)
-            proc.stdin.write(pixels.astype(np.uint8).tobytes())
+            # Mathematically scored layered VFX, including safe 2.5D optical pose echoes.
+            frame=optics.render(frame,t,beat,beat,f,(sx,sy,cw,ch))
+            if blackout:
+                frame=cv2.convertScaleAbs(frame,alpha=max(0,1-clamp(blackout,0,1)),beta=0)
+            proc.stdin.write(frame.tobytes())
             if f>0 and f%480==0: print(f'Rendered {f/args.fps:.0f}s / {args.duration:.0f}s',flush=True)
     except BrokenPipeError as exc:
         raise RuntimeError('FFmpeg encoder exited before all frames were written') from exc
@@ -135,6 +118,7 @@ def main():
     parser.add_argument('--height',type=int,default=1080)
     parser.add_argument('--fps',type=int,default=24)
     parser.add_argument('--duration',type=float,default=158.)
+    parser.add_argument('--start',type=float,default=0.)
     parser.add_argument('--crf',type=int,default=21)
     parser.add_argument('--preset',choices=['ultrafast','superfast','veryfast','faster','fast','medium'],default='veryfast')
     render(parser.parse_args())

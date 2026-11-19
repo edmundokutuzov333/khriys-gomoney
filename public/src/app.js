@@ -52,5 +52,5 @@ full.addEventListener('click',async()=>{try{if(!document.fullscreenElement)await
 document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement?.tagName))return;if(e.code==='Space'){e.preventDefault();toggle();} else if(e.code==='ArrowRight'){audio.currentTime=clamp(audio.currentTime+5,0,DURATION);}else if(e.code==='ArrowLeft'){audio.currentTime=clamp(audio.currentTime-5,0,DURATION);}else if(e.key==='m'){mute.click();}else if(e.key==='f'){full.click();}});
 if('ResizeObserver'in window)new ResizeObserver(resize).observe(canvas);else window.addEventListener('resize',resize);
 // Only surface a release when GitHub has actually published an exported MP4.
-fetch('https://api.github.com/repos/edmundokutuzov333/khriys-gomoney/releases/tags/visualizer-v1').then(r=>r.ok?r.json():null).then(data=>{const asset=data?.assets?.find(a=>a.name==='walk-to-the-bank-visualizer.mp4');if(asset){save.href=asset.browser_download_url;save.hidden=false;}}).catch(()=>{});
+fetch('https://api.github.com/repos/edmundokutuzov333/khriys-gomoney/releases/tags/visualizer-v2').then(r=>r.ok?r.json():null).then(data=>{const asset=data?.assets?.find(a=>a.name==='walk-to-the-bank-visualizer.mp4');if(asset){save.href=asset.browser_download_url;save.hidden=false;}}).catch(()=>{});
 labels();requestAnimationFrame(frame);
