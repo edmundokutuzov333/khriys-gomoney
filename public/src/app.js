@@ -56,15 +56,10 @@ mute.addEventListener('click',()=>{audio.muted=!audio.muted;mute.setAttribute('a
 full.addEventListener('click',async()=>{try{if(!document.fullscreenElement)await player.requestFullscreen();else await document.exitFullscreen();}catch(e){status.textContent='Ecrã inteiro indisponível neste browser.';}});
 document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement?.tagName))return;if(e.code==='Space'){e.preventDefault();toggle();} else if(e.code==='ArrowRight'){audio.currentTime=clamp(audio.currentTime+5,0,DURATION);sync.seek();}else if(e.code==='ArrowLeft'){audio.currentTime=clamp(audio.currentTime-5,0,DURATION);sync.seek();}else if(e.key==='m'){mute.click();}else if(e.key==='f'){full.click();}});
 if('ResizeObserver'in window)new ResizeObserver(resize).observe(canvas);else window.addEventListener('resize',resize);
-// A known, published V2 release remains a working download fallback.
-const archive='https://github.com/edmundokutuzov333/khriys-gomoney/releases/download/';
+// Stable, validated public GitHub Release asset: no API rate limit, no expiring URL.
 save.hidden=false;
-save.href=archive+'visualizer-v2/walk-to-the-bank-v2.mp4';
-save.textContent='DOWNLOAD MP4 V2';
-// Switch only after a V3 GitHub release asset really exists.
-fetch('https://api.github.com/repos/edmundokutuzov333/khriys-gomoney/releases/tags/visualizer-v3')
- .then(r=>r.ok?r.json():null).then(data=>{
-  const found=data?.assets?.find(a=>a.name==='walk-to-the-bank-v3.mp4'&&a.size>1000000);
-  if(found){save.href=found.browser_download_url;save.textContent='DOWNLOAD MP4 V3';}
- }).catch(()=>{});
+save.href='https://github.com/edmundokutuzov333/khriys-gomoney/releases/download/visualizer-v3/walk-to-the-bank-v3.mp4';
+save.textContent='DOWNLOAD MP4 V3';
+save.removeAttribute('target');
+save.setAttribute('aria-label','Descarregar o visualizer V3 completo em MP4');
 labels();requestAnimationFrame(frame);
