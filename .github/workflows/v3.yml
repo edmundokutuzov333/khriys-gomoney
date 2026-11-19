@@ -59,3 +59,21 @@ jobs:
           git add README.md docs/DIRECTION.md package.json vercel.json public/index.html public/src public/motion-loop.mp4 public/guard.png public/audio-map.json scripts/guard.py scripts/render.py scripts/vfx.py tests/test_guard.py tests/test_motion_render.py tests/motion.test.mjs tests/vfx.test.mjs
           git commit -m 'feat(v3): seamless motion plate and source-preserved film editor'
           git push origin HEAD:main
+      - name: Render final 158 second V3 master from video and soundtrack
+        run: |
+          python scripts/render.py --image public/cover.png --motion public/motion-loop.mp4 --guard public/guard.png --audio walk_to_the_bank.mp3 --score build/score.json --map public/audio-map.json --output build/walk-to-the-bank-v3.mp4 --width 1920 --height 1080 --fps 24 --duration 158 --crf 21 --preset veryfast
+      - name: Verify the resulting MP4 and its audio
+        run: |
+          python - <<'PY'
+          import json,subprocess,os
+          p='build/walk-to-the-bank-v3.mp4'
+          d=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',p]))
+          v=next(s for s in d['streams'] if s['codec_type']=='video')
+          a=next(s for s in d['streams'] if s['codec_type']=='audio')
+          assert v['codec_name']=='h264' and a['codec_name']=='aac'
+          assert v['width']==1920 and v['height']==1080
+          assert int(v['nb_frames'])==3792
+          assert abs(float(d['format']['duration'])-158)<.08
+          assert os.path.getsize(p)>1000000
+          print('Valid final master: 3,792 frames, 158 seconds, original music')
+          PY
