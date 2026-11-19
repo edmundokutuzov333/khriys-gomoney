@@ -1,0 +1,82 @@
+name: First install — film pipeline
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Transfer audited project sources from the supplied workspace
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-all-errors --retry-delay 3 --max-time 240 \
+            'https://at.adobe.com/Tfq4qrYe5YnwxSsF' -o /tmp/khriys-sources.zip
+          echo '47cb5e5cb415249d54e27f13ff1154e0eb6fac541ce8c7eadd6381ff74c6eae0  /tmp/khriys-sources.zip' | sha256sum --check
+          unzip -oq /tmp/khriys-sources.zip -d .
+          test -s scripts/render.py
+          test -s public/src/app.js
+          test -s walk_to_the_bank.mp3
+      - name: Preserve exact original photograph
+        run: |
+          curl --fail --location --retry 4 --retry-all-errors --retry-delay 3 --max-time 240 \
+            'https://at.adobe.com/vCfwiYD7NEfD7KkJ' -o public/cover.png
+          echo 'b762e2dec3df181e2e4539791f40886ab422e91f4d621a236399148ccb4cbd66  public/cover.png' | sha256sum --check
+      - name: Install free pinned rendering tools
+        run: |
+          python3 -m pip install --disable-pip-version-check 'numpy==2.2.6' 'opencv-python-headless==4.11.0.86'
+      - name: Test, analyze original MP3 and verify static build
+        run: |
+          npm test
+          npm run score
+          python3 scripts/analyze_audio.py walk_to_the_bank.mp3 --output public/audio-map.json --duration 158
+          npm run build
+          python3 - <<'PY'
+          import cv2, json
+          photo=cv2.imread('public/cover.png')
+          assert photo is not None and photo.shape[:2]==(1280,2048)
+          beats=json.load(open('public/audio-map.json'))
+          assert 150<=beats['sourceDuration']<=165 and beats['targetDuration']==158
+          print('Source, image, sound and timeline checks passed')
+          PY
+      - name: Publish full source to main, no branches
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -f .github/workflows/bootstrap.yml
+          git add -A
+          git commit -m 'feat: complete WALK TO THE BANK cinema visualizer, verified originals and CI'
+          git push origin HEAD:main
+      - name: Render complete cinema MP4
+        run: |
+          python3 scripts/render.py --image public/cover.png --audio walk_to_the_bank.mp3 \
+            --score build/score.json --map public/audio-map.json \
+            --output build/walk-to-the-bank-visualizer.mp4 \
+            --width 1920 --height 1080 --fps 24 --duration 158 --crf 21 --preset veryfast
+      - name: Audit duration, frames, codecs and sound
+        run: |
+          python3 - <<'PY'
+          import subprocess,json
+          data=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json','build/walk-to-the-bank-visualizer.mp4']))
+          video=next(s for s in data['streams'] if s['codec_type']=='video')
+          audio=next(s for s in data['streams'] if s['codec_type']=='audio')
+          assert abs(float(data['format']['duration'])-158)<0.08
+          assert (video['width'],video['height'])==(1920,1080)
+          assert video['codec_name']=='h264' and audio['codec_name']=='aac'
+          assert int(video['nb_frames'])==3792
+          print('Final master passed')
+          PY
+      - name: Publish downloadable MP4
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create visualizer-v1 build/walk-to-the-bank-visualizer.mp4 \
+            --target main --title 'WALK TO THE BANK — KHRIYS x GOMONEY' \
+            --notes 'Official 02:38 visualizer. Original photography preserved. 1080p 24fps H.264/AAC.'
