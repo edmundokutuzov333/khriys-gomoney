@@ -79,3 +79,13 @@ jobs:
           assert os.path.getsize(p)>1000000
           print('Valid final master: 3,792 frames, 158 seconds, original music')
           PY
+      - name: Publish V3 film and motion loop with direct MP4 links
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view visualizer-v3 >/dev/null 2>&1; then
+            gh release upload visualizer-v3 build/walk-to-the-bank-v3.mp4 public/motion-loop.mp4 --clobber
+          else
+            gh release create visualizer-v3 build/walk-to-the-bank-v3.mp4 public/motion-loop.mp4 --target main --title 'WALK TO THE BANK - V3 Real Motion' --notes 'Full 158 second trap visualizer, animated physical movement, original face and exact FLOW package text protected, 39 analog visual effects, 1920x1080 24fps, original music.'
+          fi
