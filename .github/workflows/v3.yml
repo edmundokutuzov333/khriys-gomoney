@@ -1,25 +1,53 @@
-name: Real Motion V3 Tests
+name: WALK TO THE BANK / V3 Motion Verified
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'public/src/**'
-      - 'scripts/**'
-      - 'tests/**'
       - '.github/workflows/v3.yml'
 permissions:
-  contents: read
+  contents: write
 jobs:
-  verify:
+  master:
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - run: npm test
-
-      - name: Unpack reviewed V3 files
+      - name: Checkout main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Install free rendering tools
         run: |
-          curl --fail --location --retry 3 'https://at.adobe.com/9KGoQKYo3RMgiqzC' -o /tmp/v3.zip
-          echo 'fd0cc89a1afabe5871b25b4edd1f2be3f8343db90f73c015cda7a4f7e70f21a8  /tmp/v3.zip' | sha256sum -c
+          sudo apt-get install -y ffmpeg
+          python -m pip install --disable-pip-version-check 'numpy==2.2.6' 'opencv-python-headless==4.11.0.86'
+      - name: Fetch immutable verified source and generated motion clip
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 'https://at.adobe.com/9KGoQKYo3RMgiqzC' -o /tmp/v3.zip
+          echo 'fd0cc89a1afabe5871b25b4edd1f2be3f8343db90f73c015cda7a4f7e70f21a8  /tmp/v3.zip' | sha256sum --check
           unzip -oq /tmp/v3.zip -d .
+          curl --fail --location --retry 4 'https://khriys-gomoney.vercel.app/motion-loop.mp4' -o public/motion-loop.mp4
+          test "$(stat -c%s public/motion-loop.mp4)" -gt 500000
+          echo 'b762e2dec3df181e2e4539791f40886ab422e91f4d621a236399148ccb4cbd66  public/cover.png' | sha256sum --check
+      - name: Check video geometry and original content
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          f='public/motion-loop.mp4'
+          x=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',f]))
+          v=next(s for s in x['streams'] if s['codec_type']=='video')
+          assert 9.5<float(x['format']['duration'])<10.6
+          assert v['width']>=1000 and v['height']>=650
+          assert not any(s['codec_type']=='audio' for s in x['streams'])
+          print('Original 10s motion take verified')
+          PY
+      - name: Test and build source-locked face/text/product guard
+        run: |
           npm test
+          python scripts/guard.py --image public/cover.png --video public/motion-loop.mp4 --score build/score.json --output public/guard.png
+          python scripts/analyze_audio.py walk_to_the_bank.mp3 --output public/audio-map.json --duration 158
+          npm run build
