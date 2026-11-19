@@ -16,3 +16,10 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - run: npm test
+
+      - name: Unpack reviewed V3 files
+        run: |
+          curl --fail --location --retry 3 'https://at.adobe.com/9KGoQKYo3RMgiqzC' -o /tmp/v3.zip
+          echo 'fd0cc89a1afabe5871b25b4edd1f2be3f8343db90f73c015cda7a4f7e70f21a8  /tmp/v3.zip' | sha256sum -c
+          unzip -oq /tmp/v3.zip -d .
+          npm test
