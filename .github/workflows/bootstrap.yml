@@ -17,8 +17,8 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail --location --retry 4 --retry-all-errors --retry-delay 3 --max-time 240 \
-            'https://at.adobe.com/Tfq4qrYe5YnwxSsF' -o /tmp/khriys-sources.zip
-          echo '47cb5e5cb415249d54e27f13ff1154e0eb6fac541ce8c7eadd6381ff74c6eae0  /tmp/khriys-sources.zip' | sha256sum --check
+            'https://at.adobe.com/gvgMzpDluraTJse0' -o /tmp/khriys-sources.zip
+          echo '00959ff5d8980c61c1179a9950128c476373ec0df7ef9bf06c83f8ceaf5c6d8e  /tmp/khriys-sources.zip' | sha256sum --check
           unzip -oq /tmp/khriys-sources.zip -d .
           test -s scripts/render.py
           test -s public/src/app.js
@@ -28,8 +28,14 @@ jobs:
           curl --fail --location --retry 4 --retry-all-errors --retry-delay 3 --max-time 240 \
             'https://at.adobe.com/vCfwiYD7NEfD7KkJ' -o public/cover.png
           echo 'b762e2dec3df181e2e4539791f40886ab422e91f4d621a236399148ccb4cbd66  public/cover.png' | sha256sum --check
-      - name: Install free pinned rendering tools
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Install FFmpeg and free pinned rendering tools
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
           python3 -m pip install --disable-pip-version-check 'numpy==2.2.6' 'opencv-python-headless==4.11.0.86'
       - name: Test, analyze original MP3 and verify static build
         run: |
