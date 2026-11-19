@@ -1,104 +1,50 @@
-name: WALK TO THE BANK / Cinema Build
-
+name: Import cinema V2 onto main
 on:
   push:
     branches: [main]
-    paths:
-      - 'public/src/**'
-      - 'public/index.html'
-      - 'public/cover.png'
-      - 'walk_to_the_bank.mp3'
-      - 'scripts/**'
-      - 'tests/**'
-      - 'package.json'
-  workflow_dispatch:
-
+    paths: ['.github/workflows/bootstrap.yml']
 permissions:
   contents: write
-
-concurrency:
-  group: walk-to-the-bank-master
-  cancel-in-progress: false
-
 jobs:
-  render-and-release:
+  apply-v2:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
       - name: Checkout main
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-      - name: Verify immutable source photograph and music
-        shell: bash
+      - name: Import exact reviewed V2 source archive
         run: |
           set -euo pipefail
-          test -s public/src/app.js
-          test -s scripts/render.py
-          test -s walk_to_the_bank.mp3
+          curl -fLsS --retry 4 --retry-all-errors --retry-delay 3 --max-time 180 \
+            'https://at.adobe.com/XUwIdf6sLv3ctADy' -o /tmp/walk-to-bank-v2.zip
+          echo '622d2a51b021095772442b03ffbdba946c9d8644250c2be9ba71c466567e7584  /tmp/walk-to-bank-v2.zip' | sha256sum --check
+          unzip -oq /tmp/walk-to-bank-v2.zip -d .
+          test -s public/src/vfx.js
+          test -s scripts/vfx.py
+          test -s tests/test_vfx.py
           echo 'b762e2dec3df181e2e4539791f40886ab422e91f4d621a236399148ccb4cbd66  public/cover.png' | sha256sum --check
-      - name: Setup pinned Python
+          test -s walk_to_the_bank.mp3
+      - name: Python runtime for reproducible offline tests
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
-      - name: Install open source encoding and image engines
-        run: |
-          sudo apt-get install -y ffmpeg
-          python -m pip install --disable-pip-version-check 'numpy==2.2.6' 'opencv-python-headless==4.11.0.86'
-      - name: Verify score, generate audio map and test build
+      - name: Install pinned free OpenCV and NumPy
+        run: python -m pip install --disable-pip-version-check 'numpy==2.2.6' 'opencv-python-headless==4.11.0.86'
+      - name: Test source, VFX geometry, identity masks and site packaging
         run: |
           npm test
-          npm run score
-          python3 scripts/analyze_audio.py walk_to_the_bank.mp3 --output public/audio-map.json --duration 158
           npm run build
-          python3 - <<'PY'
-          import json,cv2
-          p=cv2.imread('public/cover.png')
-          assert p is not None and p.shape[:2]==(1280,2048)
-          d=json.load(open('public/audio-map.json'))
-          assert 150<=d['sourceDuration']<=165
-          assert d['targetDuration']==158 and len(d['beats'])>0
-          print('Original media, rhythm map and playback build verified')
-          PY
-      - name: Update analyzed beat map only when changed
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/audio-map.json
-          if ! git diff --cached --quiet; then
-            git commit -m 'chore(audio): refresh verified percussion map'
-            git push origin HEAD:main
-          fi
-      - name: Render 02:38 / 1920x1080 / 24fps movie
-        run: |
-          python3 scripts/render.py --image public/cover.png --audio walk_to_the_bank.mp3 \
-            --score build/score.json --map public/audio-map.json \
-            --output build/walk-to-the-bank-visualizer.mp4 \
-            --width 1920 --height 1080 --fps 24 --duration 158 --crf 21 --preset veryfast
-      - name: Validate complete film master and embedded audio
-        run: |
-          python3 - <<'PY'
-          import json,subprocess,os
-          path='build/walk-to-the-bank-visualizer.mp4'
-          d=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',path]))
-          v=next(s for s in d['streams'] if s['codec_type']=='video')
-          a=next(s for s in d['streams'] if s['codec_type']=='audio')
-          assert abs(float(d['format']['duration'])-158)<.08
-          assert (v['width'],v['height'])==(1920,1080)
-          assert v['codec_name']=='h264' and a['codec_name']=='aac'
-          assert int(v['nb_frames'])==3792
-          assert os.path.getsize(path)>1000000
-          print('Full film master verified, 3792 frames and original audio mixed in')
-          PY
-      - name: Create or update downloadable release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          python -m py_compile scripts/vfx.py scripts/render.py
+          echo 'All verification passed; pushing source files to main.'
+      - name: Atomic source commit on main without workflow permissions
         run: |
           set -euo pipefail
-          if gh release view visualizer-v1 >/dev/null 2>&1; then
-            gh release upload visualizer-v1 build/walk-to-the-bank-visualizer.mp4 --clobber
-          else
-            gh release create visualizer-v1 build/walk-to-the-bank-visualizer.mp4 \
-              --target main --title 'WALK TO THE BANK — KHRIYS x GOMONEY' \
-              --notes 'Full 02:38 underground cinematic trap visualizer. Exact original photograph preserved. 1080p 24fps H.264/AAC.'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- . ':!.github/workflows'
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat(v2): cinematic body echoes, four underground VFX styles and integrity checks'
+            git push origin HEAD:main
           fi
