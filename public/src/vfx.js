@@ -7,11 +7,14 @@ export const LOOKS=Object.freeze(['clean','night','rgb','fire','surveillance']);
 
 // In ORIGINAL photograph fractional coordinates, not screen coordinates. No AI guesses.
 // These may be graded, but NEVER spatially torn/displaced or redrawn.
+// In V3 the registered original-image alpha plate also freezes these exact pixels.
 export const IMMUTABLE=Object.freeze([
   {name:'LEFT_FACE', box:[.174,.298,.285,.496]},
   {name:'RIGHT_FACE',box:[.626,.268,.736,.474]},
   {name:'CHALK_TEXT',box:[.145,.115,.685,.287]},
   {name:'FLOW_PACKAGE',box:[.804,.452,.906,.712]},
+  {name:'LEFT_EMBLEM',box:[.301,.515,.330,.561]},
+  {name:'RIGHT_EMBLEM',box:[.702,.504,.736,.566]},
 ]);
 // Restricted to already photographed limbs and accessories. No new bodies/identities.
 // Fractional original-coordinate polygons, subtle local optical displacement only.

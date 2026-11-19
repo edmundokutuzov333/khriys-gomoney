@@ -1,67 +1,65 @@
-# WALK TO THE BANK — KHRIYS × GOMONEY
+# WALK TO THE BANK — KHRIYS × GOMONEY / V3
 
-An original-image-preserving, full-length (02:38) **underground trap visualizer**. The project includes a responsive zero-dependency web cinema player and an offline MP4 cinema master rendered by GitHub Actions. Production happens entirely on `main`.
+Official underground trap visualizer, **02:38, 1920×1080, 24fps**, using the original 2048×1280 image and original MP3. V3 adds **real generated limb, wrist, breathing and jacket motion** behind 39 distinct optical effect cues, rather than merely zooming a static picture. The full video is rendered off-line, and the responsive Vercel player reuses the same 10.083-second silent motion clip in synchrony with the 158-second original track.
 
-## Final delivery
+## Creative and identity guarantees
 
-- **Web player:** Vercel static site serving the exact original photograph and MP3. Playback has fullscreen, seeking, mute, beat-reactive lens treatment and deterministic camera direction.
-- **Film:** GitHub Release `visualizer-v1` → `walk-to-the-bank-visualizer.mp4` (1920×1080, 24 fps, H.264/AAC, 158 seconds, 3,792 frames). The download appears automatically in the player after the release is published.
-- **Originals:** `public/cover.png` (2048×1280) and `walk_to_the_bank.mp3` remain untouched. `public/audio-map.json` is derived solely from the original music.
+- The original photo remains immutable at `public/cover.png`. The original MP3 remains at repo root.
+- The 10-second AI motion plate was generated once with Kling 2.5 1080p (650 Magnific credits; unlimited was not active). Its first and last source image are the same original photograph to make the loop continuous.
+- Generated movement is restricted through prompt direction to the two arms, hands, watch and jacket cloth. **Not all intermediate pixels from AI can be claimed perfectly authentic.** To prevent changes to key identity and branding, `scripts/guard.py` uses SIFT+RANSAC to register the true photo to the generated footage, then creates a feathered transparent guard from original pixels.
+- `public/guard.png` covers six regions: both faces, chalkboard lettering, FLOW package, and both embroidered school emblems. This guard is composited **before** colour processing or glitch overlays in both the browser (`FilmEngine`) and MP4 master (`scripts/render.py`). Protected areas never undergo spatial tear or synthesized movement.
+- The six protected regions are not lip-synced, morph-generated, rewritten or inpainted. Packaging, typography and faces are the original pixels. No new lettering appears on screen.
+- Optical effects are inspired by the four provided GIF *techniques*, not copies of their imagery. Clean, green nightvision, red/cyan CRT tearing, fiery solarization, CCTV and film grain alternate on 39 cues. No additional music, cost-bearing postprocessing or Magnific credits for loops or VFX.
 
-## Absolute creative restrictions
+## Architecture comparison
 
-Every scene is a crop/scale/translation **of the unchanged photograph**. There is NO face generation, replacement, morphing, inpainting, pose animation, face tracking, object animation, editing of existing packaging or chalkboard text, or added on-video titles. Cinematography is created through shot selection, cadence, optical gate, restrained light leaks, vignette, grain and musical cuts. For a real moving pose performance, additional live-action source plates would be needed; this release correctly does not invent new poses.
+1. **Generate 158 seconds of AI video** — impractical cost, difficult identity coherence, high risk of faces and letters changing.
+2. **Still image with motion filters only (V2)** — inexpensive and deterministic but actors cannot actually move, so not adequate.
+3. **One generated 10s motion plate + protected original-photo regions + local deterministic 158s optical cinema master** — chosen. One generation, stable masks, real body movement behind protected identities, low running costs, browser loop and downloadable render.
 
-## Zero-cost technical selection
-
-| Option | Upsides | Risks | Decision |
-|---|---|---|---|
-| Generative image-to-video | Body/face motion possible | Can change identities, text, package and faces; expensive | Rejected |
-| Remotion + headless Chromium | Powerful frame UI, familiar React scene graphs | Larger dependency/toolchain, browser rendering overhead for a one-photo film | Not selected |
-| **Canvas 2D + Web Audio + deterministic EDL + Python/OpenCV/FFmpeg render** | No paid services, lightweight web player, stable image, exact frames and duration, reproducible CI export | Camera motion from a still rather than actual actor performance | **Selected** |
-
-The source photo has 2048×1280 native resolution. 1080p is a faithful export; an actual Alexa 65/8K camera original is impossible to recover from a still. The film grade interprets the requested Vision3/ARRI tonal references without claiming a nonexistent camera acquisition.
-
-## Architecture
+## Files
 
 ```text
 public/
-  index.html             responsive film player; no on-image copy
-  src/app.js             transport, audio time synchronization and input events
-  src/score.js           21 immutable edit cues; musical act-energy; crop validation
-  src/film.js            canvas engine; grain, gate, flare, flashes
-  src/style.css          restrained underground editorial player
-  cover.png              exact original source image
-  audio-map.json         source music transient analysis
+  cover.png                untouched source photograph
+  motion-loop.mp4          silent 10.083-second actor plate
+  guard.png                RGBA original-image identity matte, SIFT registered
+  walk_to_the_bank.mp3     copied from original audio at build
+  src/motion.js            timestamp wrap and video/audio drift correction
+  src/film.js              Canvas2D layered plate + original-photo guard + optical VFX
+  src/app.js               music-master playback, seek, fullscreen and download
+  src/score.js             21 camera/editorial cues, 158-second duration
+  src/vfx.js               39 VFX treatments and protected regions
 scripts/
-  analyze_audio.py       stdlib + ffmpeg 8 kHz transient map
-  export_score.mjs       same web cue data exported for offline renderer
-  render.py              OpenCV full-frame editor → FFmpeg H.264/AAC
-  prepare.mjs            deterministic MP3 handoff into static directory
+  guard.py                 image-to-video alignment, mask rasterization
+  render.py                CPU loop decoder → protected graded frames → FFmpeg MP4
+  vfx.py                   matching deterministic optical effects
+  analyze_audio.py        original song transient extraction
+  export_score.mjs        shared shot/VFX plan
+  prepare.mjs             static MP3 copy for Vercel
 .github/workflows/
-  release.yml            test → source verify → render → ffprobe → GitHub Release
+  bootstrap.yml            verified CI → full V3 release
 ```
 
-## Development
+## Build and QA
 
-Requires Node ≥20, Python 3, `ffmpeg`, `ffprobe`. Static web player has **zero npm dependencies**. Film renderer requires `numpy==2.2.6` and `opencv-python-headless==4.11.0.86` (free and pinned for CI).
+Requires Node 22+, Python 3.12+, FFmpeg, `numpy==2.2.6`, `opencv-python-headless==4.11.0.86`.
 
-```sh
+```bash
 npm test
-npm run score
-python3 scripts/analyze_audio.py walk_to_the_bank.mp3
 npm run build
-npm start
-# http://localhost:4173
-
-python3 scripts/render.py # default: 1920x1080, 24 fps, 158 seconds
+python scripts/guard.py --video public/motion-loop.mp4
+python scripts/render.py --image public/cover.png --motion public/motion-loop.mp4 --guard public/guard.png \
+  --audio walk_to_the_bank.mp3 --score build/score.json --map public/audio-map.json \
+  --output build/walk-to-the-bank-v3.mp4 --width 1920 --height 1080 --fps 24 --duration 158
 ```
 
-The original MP3 stays at the repository root; `npm run build` duplicates it into `public/` for deployment without rewriting or recompressing it. `npm run score` produces the shared source of truth for shot cue coordinates. Production render copies the original soundtrack into an AAC video track without effects or tempo adjustments.
+Both browser and MP4 retain **independent access** to the original still should an AI video decode fail. Browser playback uses the MP3 as master clock and resynchronizes the silent plate if drift exceeds 115ms. No paid video inference is performed at runtime.
 
-## QA
+## Delivery
 
-- 9 Node built-in unit/integrity tests: timeline, dimensions, cropping, deterministic keyframes, envelope and source preservation.
-- Live original asset dimension check (2048×1280), decoded music length check, full output duration/frame/codec audit via ffprobe.
-- Automated release only after rendering and verification succeed.
-- Public source and public original photo/video: publish only if you own the rights to the supplied track and image.
+- **Online visualizer:** https://khriys-gomoney.vercel.app
+- **V3 MP4 download:** https://github.com/edmundokutuzov333/khriys-gomoney/releases/download/visualizer-v3/walk-to-the-bank-v3.mp4
+- **Motion source download:** https://github.com/edmundokutuzov333/khriys-gomoney/releases/download/visualizer-v3/motion-loop.mp4
+
+Github Actions verifies master duration (158s), H.264 video, AAC soundtrack, frame count (3792), dimensions (1920×1080) and playback file presence before release. Only the `main` branch is modified; V1/V2 releases are preserved.

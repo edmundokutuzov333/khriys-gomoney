@@ -9,3 +9,6 @@ footer{margin-top:auto;justify-content:space-between;border-top:1px solid #2b2e2
 :fullscreen{padding:0;background:#000}.screen-wrap:fullscreen{width:100vw;height:100vh;aspect-ratio:auto;display:flex;align-items:center;justify-content:center}.screen-wrap:fullscreen .matte{position:relative;width:min(100vw,177.77778vh);height:min(100vh,56.25vw)}
 @media(max-width:660px){.app-shell{justify-content:flex-start;padding:12px;gap:15px}.masthead{min-height:46px}.identity{font-size:10px;letter-spacing:.09em}.eyebrow{font-size:8px;letter-spacing:0;text-align:right;max-width:140px;line-height:1.7}.slash{padding:0 3px}.screen-wrap{margin-top:clamp(15px,12vw,70px)}.center-play{width:49px;height:49px}.center-play svg{height:17px;width:17px}.frame-corner{height:10px;width:10px}.transport{height:54px;gap:13px}.time{font-size:10px;min-width:85px}footer{margin-top:10px;font-size:8px;line-height:1.8;letter-spacing:.08em;gap:12px}footer a{font-size:9px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+
+/* Internal video decodes for frame-accurate Canvas compositing, never visible twice. */
+.source-video {position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;left:0;top:0;}

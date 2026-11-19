@@ -15,6 +15,55 @@ import numpy as np
 from vfx import OpticalVFX
 
 
+class LoopReader:
+    """Decode generated silent video sequentially, with sample-accurate loop phases."""
+    def __init__(self, path: Path):
+        self.cap=cv2.VideoCapture(str(path))
+        self.fps=float(self.cap.get(cv2.CAP_PROP_FPS))
+        self.count=int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if not self.cap.isOpened() or not 10<=self.fps<=120 or self.count<20:
+            raise ValueError(f"Invalid motion plate: {path}")
+        self.duration=self.count/self.fps
+        if not 3<=self.duration<=30:raise ValueError("Motion clip duration invalid")
+        self.index=-1
+        self.frame=None
+
+    def at(self, time:float):
+        phase=time%self.duration
+        target=min(self.count-1,int(phase*self.fps+.01))
+        if target<self.index:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES,0)
+            self.index=-1
+        while self.index<target:
+            ok,self.frame=self.cap.read()
+            if not ok:raise RuntimeError(f"Video decode failed at frame {self.index+1}")
+            self.index+=1
+        return self.frame
+
+    def close(self):self.cap.release()
+
+
+def crop_dynamic(src:np.ndarray, crop:tuple, photo_size:tuple, width:int, height:int):
+    """Carry source-photo camera cues onto the registered 16:9 video plate."""
+    ow,oh=photo_size
+    vw,vh=src.shape[1],src.shape[0]
+    fitw=min(ow,oh*vw/vh); fith=fitw*vh/vw
+    offx=(ow-fitw)/2;offy=(oh-fith)/2
+    sx,sy,cw,ch=crop
+    left=int(clamp((sx-offx)/fitw*vw,0,vw-2))
+    top=int(clamp((sy-offy)/fith*vh,0,vh-2))
+    dw=int(clamp(cw/fitw*vw,2,vw-left));dh=int(clamp(ch/fith*vh,2,vh-top))
+    return cv2.resize(src[top:top+dh,left:left+dw],(width,height),interpolation=cv2.INTER_LINEAR)
+
+
+def guard_plate(src:np.ndarray,guard:np.ndarray):
+    """Preserve signed-off photo pixels in immutable alpha regions."""
+    if guard.shape[:2]!=src.shape[:2]:raise ValueError("Protection matte and motion geometry mismatch")
+    alpha=guard[:,:,3:4].astype(np.float32)*(1/255)
+    rgb=guard[:,:,:3].astype(np.float32)
+    return np.clip(src.astype(np.float32)*(1-alpha)+rgb*alpha,0,255).astype(np.uint8)
+
+
 def clamp(x: float, lo: float, hi: float) -> float:
     return min(hi, max(lo, x))
 
@@ -64,6 +113,13 @@ def render(args: argparse.Namespace) -> None:
     audio_map=json.loads(args.map.read_text())
     beats=audio_map.get('beats',[])
     ow,oh=image.shape[1],image.shape[0]
+    motion=LoopReader(args.motion) if args.motion else None
+    guard=cv2.imread(str(args.guard),cv2.IMREAD_UNCHANGED) if args.guard else None
+    if motion:
+        if guard is None or guard.shape[2]!=4:raise ValueError('AI motion requires aligned RGBA immutable guard')
+        if (motion.cap.get(cv2.CAP_PROP_FRAME_WIDTH),motion.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))!=(guard.shape[1],guard.shape[0]):
+            raise ValueError('AI video and protected guard dimensions do not match')
+    elif args.guard:raise ValueError('Guard requires motion video')
     W,H=args.width,args.height
     assert W%2==H%2==0
     frames=round(args.duration*args.fps)
@@ -90,9 +146,13 @@ def render(args: argparse.Namespace) -> None:
             cw=min(ow,oh*W/H)/zoom;ch=cw*H/W
             sx=clamp(x*ow-cw/2,0,ow-cw);sy=clamp(y*oh-ch/2,0,oh-ch)
             # Sampling only: no pixel synthesis, facial relighting, geometry warp or inpainting.
-            frame=cv2.resize(image[int(sy):int(sy+ch),int(sx):int(sx+cw)],(W,H),interpolation=cv2.INTER_LINEAR)
-            # Mathematically scored layered VFX, including safe 2.5D optical pose echoes.
-            frame=optics.render(frame,t,beat,beat,f,(sx,sy,cw,ch))
+            if motion:
+                plate=guard_plate(motion.at(t),guard)
+                frame=crop_dynamic(plate,(sx,sy,cw,ch),(ow,oh),W,H)
+            else:
+                frame=cv2.resize(image[int(sy):int(sy+ch),int(sx):int(sx+cw)],(W,H),interpolation=cv2.INTER_LINEAR)
+            # Shared 39-section optical edit over real actor motion, with frozen protected pixels.
+            frame=optics.render(frame,t,beat,beat,f,(sx,sy,cw,ch),moving=bool(motion))
             if blackout:
                 frame=cv2.convertScaleAbs(frame,alpha=max(0,1-clamp(blackout,0,1)),beta=0)
             proc.stdin.write(frame.tobytes())
@@ -100,6 +160,7 @@ def render(args: argparse.Namespace) -> None:
     except BrokenPipeError as exc:
         raise RuntimeError('FFmpeg encoder exited before all frames were written') from exc
     finally:
+        if motion:motion.close()
         if proc.stdin: proc.stdin.close()
     result=proc.wait()
     if result: raise RuntimeError(f'FFmpeg failed with exit code {result}')
@@ -110,6 +171,8 @@ def render(args: argparse.Namespace) -> None:
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--image',type=Path,default=Path('public/cover.png'))
+    parser.add_argument('--motion',type=Path,default=None)
+    parser.add_argument('--guard',type=Path,default=None)
     parser.add_argument('--audio',type=Path,default=Path('walk_to_the_bank.mp3'))
     parser.add_argument('--score',type=Path,default=Path('build/score.json'))
     parser.add_argument('--map',type=Path,default=Path('public/audio-map.json'))

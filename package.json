@@ -1,7 +1,7 @@
 {
   "name": "khriys-gomoney-cinema",
   "private": true,
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "test": "npm run score && node --test tests/*.test.mjs && python -m unittest discover -s tests -p \"test_*.py\"",
