@@ -17,8 +17,8 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail --location --retry 4 --retry-all-errors --retry-delay 3 --max-time 240 \
-            'https://at.adobe.com/gvgMzpDluraTJse0' -o /tmp/khriys-sources.zip
-          echo '00959ff5d8980c61c1179a9950128c476373ec0df7ef9bf06c83f8ceaf5c6d8e  /tmp/khriys-sources.zip' | sha256sum --check
+            'https://at.adobe.com/X5AioBlNaliafAT4' -o /tmp/khriys-sources.zip
+          echo '7285d36587e9fc0bf431c461c68bb7ef720825d38e35aa4338e5663ebe79c51f  /tmp/khriys-sources.zip' | sha256sum --check
           unzip -oq /tmp/khriys-sources.zip -d .
           test -s scripts/render.py
           test -s public/src/app.js
@@ -34,7 +34,6 @@ jobs:
           python-version: '3.12'
       - name: Install FFmpeg and free pinned rendering tools
         run: |
-          sudo apt-get update -qq
           sudo apt-get install -y ffmpeg
           python3 -m pip install --disable-pip-version-check 'numpy==2.2.6' 'opencv-python-headless==4.11.0.86'
       - name: Test, analyze original MP3 and verify static build
