@@ -3,14 +3,23 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/official-audio.yml'
+      - 'public/audiooficial/**'
   workflow_dispatch:
+  workflow_run:
+    workflows: ['WALK TO THE BANK V3 - Verified Cinema Release']
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: write
 
+concurrency:
+  group: walk-to-the-bank-official-audio-sync
+  cancel-in-progress: false
+
 jobs:
   replace-music-without-touching-picture:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
