@@ -1,10 +1,10 @@
 # WALK TO THE BANK — KHRIYS × GOMONEY / V3
 
-Official underground trap visualizer, **02:38, 1920×1080, 24fps**, using the original 2048×1280 image and original MP3. V3 adds **real generated limb, wrist, breathing and jacket motion** behind 39 distinct optical effect cues, rather than merely zooming a static picture. The full video is rendered off-line, and the responsive Vercel player reuses the same 10.083-second silent motion clip in synchrony with the 158-second original track.
+Official underground trap visualizer, **02:38, 1920×1080, 24fps**, using the original 2048×1280 image and the **final official mix** at `public/audiooficial/walktothebank.m4a`. V3 adds **real generated limb, wrist, breathing and jacket motion** behind 39 distinct optical effect cues, rather than merely zooming a static picture. The full video is rendered off-line, and the responsive Vercel player reuses the same 10.083-second silent motion clip in synchrony with the 158-second original track.
 
 ## Creative and identity guarantees
 
-- The original photo remains immutable at `public/cover.png`. The original MP3 remains at repo root.
+- The original photo remains immutable at `public/cover.png`. The earlier MP3 remains archived at repo root; the official M4A in `public/audiooficial/` is the only playback and export audio source.
 - The 10-second AI motion plate was generated once with Kling 2.5 1080p (650 Magnific credits; unlimited was not active). Its first and last source image are the same original photograph to make the loop continuous.
 - Generated movement is restricted through prompt direction to the two arms, hands, watch and jacket cloth. **Not all intermediate pixels from AI can be claimed perfectly authentic.** To prevent changes to key identity and branding, `scripts/guard.py` uses SIFT+RANSAC to register the true photo to the generated footage, then creates a feathered transparent guard from original pixels.
 - `public/guard.png` covers six regions: both faces, chalkboard lettering, FLOW package, and both embroidered school emblems. This guard is composited **before** colour processing or glitch overlays in both the browser (`FilmEngine`) and MP4 master (`scripts/render.py`). Protected areas never undergo spatial tear or synthesized movement.
@@ -24,7 +24,8 @@ public/
   cover.png                untouched source photograph
   motion-loop.mp4          silent 10.083-second actor plate
   guard.png                RGBA original-image identity matte, SIFT registered
-  walk_to_the_bank.mp3     copied from original audio at build
+  audiooficial/            final official M4A, used by browser and MP4
+  audio-map.json           generated transients from final official M4A
   src/motion.js            timestamp wrap and video/audio drift correction
   src/film.js              Canvas2D layered plate + original-photo guard + optical VFX
   src/app.js               music-master playback, seek, fullscreen and download
@@ -36,7 +37,7 @@ scripts/
   vfx.py                   matching deterministic optical effects
   analyze_audio.py        original song transient extraction
   export_score.mjs        shared shot/VFX plan
-  prepare.mjs             fail-closed original media verification + MP3 copy
+  prepare.mjs             fail-closed official media validation
 .github/workflows/
   bootstrap.yml            legacy V2 release (retained)
   v3.yml                   permanent V3 test → render → MP4 release

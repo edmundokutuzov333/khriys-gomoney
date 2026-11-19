@@ -10,7 +10,7 @@ on:
       - 'public/cover.png'
       - 'public/motion-loop.mp4'
       - 'public/guard.png'
-      - 'walk_to_the_bank.mp3'
+      - 'public/audiooficial/**'
       - 'scripts/**'
       - 'tests/**'
       - 'package.json'
@@ -42,17 +42,18 @@ jobs:
           set -euo pipefail
           echo 'b762e2dec3df181e2e4539791f40886ab422e91f4d621a236399148ccb4cbd66  public/cover.png' | sha256sum --check
           test -s public/motion-loop.mp4
-          test -s walk_to_the_bank.mp3
+          test -s public/audiooficial/walktothebank.m4a
           ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 public/motion-loop.mp4
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 public/audiooficial/walktothebank.m4a
       - name: Execute complete JS and Python motion / VFX regression suites
         run: |
           npm test
           python scripts/guard.py --image public/cover.png --video public/motion-loop.mp4 --score build/score.json --output build/guard.png
-          python scripts/analyze_audio.py walk_to_the_bank.mp3 --output build/audio-map.json --duration 158
+          python scripts/analyze_audio.py public/audiooficial/walktothebank.m4a --output public/audio-map.json --duration 158
           npm run build
       - name: Encode cinema master using stored moving actors with identity protection
         run: |
-          python scripts/render.py --image public/cover.png --motion public/motion-loop.mp4 --guard build/guard.png --audio walk_to_the_bank.mp3 --score build/score.json --map build/audio-map.json --output build/walk-to-the-bank-v3.mp4 --width 1920 --height 1080 --fps 24 --duration 158 --crf 21 --preset veryfast
+          python scripts/render.py --image public/cover.png --motion public/motion-loop.mp4 --guard build/guard.png --audio public/audiooficial/walktothebank.m4a --score build/score.json --map public/audio-map.json --output build/walk-to-the-bank-v3.mp4 --width 1920 --height 1080 --fps 24 --duration 158 --crf 21 --preset veryfast
       - name: Check codec, complete sound, exact duration and frame count
         run: |
           python - <<'PY'
@@ -66,7 +67,11 @@ jobs:
           assert int(v['nb_frames'])==3792
           assert abs(float(d['format']['duration'])-158)<0.08
           assert os.path.getsize(p)>1000000
-          print('Cinema release passed 30 automated tests and 158-second media verification')
+          official='public/audiooficial/walktothebank.m4a'
+          src=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',official]))
+          assert any(x['codec_type']=='audio' for x in src['streams']), 'Official song must decode'
+          assert 145 < float(src['format']['duration']) < 175, 'Unexpected official song duration; review film length'
+          print('Official M4A input and cinema H.264/AAC output verified; 158-second final edition')
           PY
       - name: Publish permanent direct download assets
         env:
@@ -77,4 +82,16 @@ jobs:
             gh release upload visualizer-v3 build/walk-to-the-bank-v3.mp4 public/motion-loop.mp4 --clobber
           else
             gh release create visualizer-v3 build/walk-to-the-bank-v3.mp4 public/motion-loop.mp4 --target main --title 'WALK TO THE BANK - V3 Real Motion' --notes 'Verified 158-second underground trap visualizer with photo-locked faces, packaging and chalkboard, and original music.'
+          fi
+
+      - name: Publish official music onset map for online effects
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/audio-map.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(audio): synchronize V3 beat map with final official mix"
+            git fetch origin main
+            git merge --no-edit origin/main
+            git push origin HEAD:main
           fi

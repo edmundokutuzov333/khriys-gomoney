@@ -5,9 +5,15 @@ test('no face-generation or text-overlay code or additional titles in canvas',()
  assert.equal(film.includes('face-api'),false);assert.equal(film.includes('transform: scaleX(-1)'),false);
  assert.ok(film.includes('drawImage(img,s.sx,s.sy,s.sw,s.sh'));
 });
-test('original MP3 remains canonical and runtime playback is local',()=>{
- const html=readFileSync('public/index.html','utf8');assert.ok(html.includes('src="/walk_to_the_bank.mp3"'));
- const prepare=readFileSync('scripts/prepare.mjs','utf8');assert.ok(prepare.includes('copyFileSync(source,destination)'));
+test('official M4A is canonical for both browser playback and cinema export',()=>{
+ const html=readFileSync('public/index.html','utf8');
+ assert.ok(html.includes('src="/audiooficial/walktothebank.m4a"'));
+ assert.ok(!html.includes('src="/walk_to_the_bank.mp3"'));
+ const prepare=readFileSync('scripts/prepare.mjs','utf8');
+ assert.ok(prepare.includes('public/audiooficial/walktothebank.m4a'));
+ const workflow=readFileSync('.github/workflows/v3.yml','utf8');
+ assert.ok(workflow.includes('--audio public/audiooficial/walktothebank.m4a'));
+ assert.ok(workflow.includes('analyze_audio.py public/audiooficial/walktothebank.m4a'));
 });
 test('no network downloads or paid service in runtime',()=>{
  const pkg=JSON.parse(readFileSync('package.json','utf8'));assert.ok(!pkg.dependencies);assert.ok(!pkg.devDependencies);

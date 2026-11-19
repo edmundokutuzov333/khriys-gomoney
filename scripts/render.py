@@ -173,7 +173,7 @@ def main():
     parser.add_argument('--image',type=Path,default=Path('public/cover.png'))
     parser.add_argument('--motion',type=Path,default=None)
     parser.add_argument('--guard',type=Path,default=None)
-    parser.add_argument('--audio',type=Path,default=Path('walk_to_the_bank.mp3'))
+    parser.add_argument('--audio',type=Path,default=Path('public/audiooficial/walktothebank.m4a'))
     parser.add_argument('--score',type=Path,default=Path('build/score.json'))
     parser.add_argument('--map',type=Path,default=Path('public/audio-map.json'))
     parser.add_argument('--output',type=Path,default=Path('build/walk-to-the-bank-visualizer.mp4'))
