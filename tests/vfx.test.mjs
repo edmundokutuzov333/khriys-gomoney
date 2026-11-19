@@ -21,7 +21,7 @@ test('the effect envelope stays finite, seeded and within editorial limits',()=>
  }
 });
 test('faces, writing and packaging have explicit source-locked spatial exclusion areas',()=>{
-  assert.deepEqual(IMMUTABLE.map(x=>x.name),['LEFT_FACE','RIGHT_FACE','CHALK_TEXT','FLOW_PACKAGE']);
+  assert.deepEqual(IMMUTABLE.map(x=>x.name),['LEFT_FACE','RIGHT_FACE','CHALK_TEXT','FLOW_PACKAGE','LEFT_EMBLEM','RIGHT_EMBLEM']);
   for(const part of IMMUTABLE){const [x0,y0,x1,y1]=part.box;
     assert.ok(x0>=0&&y0>=0&&x1<=1&&y1<=1&&x1>x0&&y1>y0);}
   for(const part of PUPPETS){assert.ok(part.amp<=40);assert.ok(part.polygon.length>=7);

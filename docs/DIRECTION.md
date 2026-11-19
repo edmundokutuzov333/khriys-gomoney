@@ -79,3 +79,24 @@ The 21 base photographic framings from `public/src/score.js` run underneath the 
 - Source faces, logo, board typography and package remain pixel-derived and unredesigned. Flash exposures and analogue noise may overlay the entire scene without rewriting those pixels' structure.
 - Use `npm test` and the FFmpeg smoke test for regression; enforce 158 seconds, 3,792 frames, H.264/AAC and no additional titles at the release step.
 - Avoid paid AI services. Zero new software-service fees, subject to GitHub Actions/Vercel free-plan quotas and whatever usage limits apply to existing accounts.
+
+---
+
+## V3 / THE BODY MOVES — Actual motion plate (2026-11-19)
+
+**Problem from V2:** Zoom, frame echoes and 2.5D translations did not create convincing physical body motion. The subject needs wrists, gestures, breathing, jacket folds and involuntary inertia while preserving human facial identity and all existing printed lettering.
+
+**Chosen implementation:** Generate one 10-second photoreal plate on Magnific using Kling 2.5, 1080p, with the original frame given at start **and** end. It costs 650 Magnific credits rather than continuously generating 158 seconds, and contains no generated audio. The output lasts about 10.083 seconds at 24fps and loops under the untouched 02:38 original MP3. The video layer moves, while the scoring engine independently supplies 39 episodes of analogue optical overlays.
+
+**Actor direction for every 10-second repetition:**
+- 00:00–00:01: Both sit and establish the original photographic poses, expressions and classroom light.
+- 00:01–00:03: The left artist stays on the telephone while his free hand rolls naturally at the wrist with fingers following, without the head moving.
+- 00:03–00:06: The right artist makes one deliberate wristwatch movement; sleeve, cuff, shoulder and jacket fabric react physically; he stays looking down.
+- 00:06–00:08: Both settle with almost imperceptible suit and breathing movement. The camera remains locked.
+- 00:08–00:10.083: Arms and cuffs return to the starting pose, closing the loop. No lip movements, changes of expression or additions to the set.
+
+**Protected photographic zones:** the two face ovals/adjacent neck region, exact chalkboard phrase `WALK TO THE BANK`, FLOW illustration and package (all printing), and embroidered emblems. A SIFT registration matches the source photograph onto the model-generated plate, then a feathered alpha matte restores source pixels on every frame, before any optical VFX. If photo-registration fails identity checks, the workflow does not publish and the static original remains available in the browser.
+
+**42?** No: the original 39 scored VFX passages remain authoritative. Colours, scanlines, grain, chroma, time echoes and lighting punch are independent of the repeated body performance, maintaining variation over the full 158 seconds. The site does not loop the soundtrack: it loops the *silent* image source and the unmodified music continues once through to 02:38.
+
+**Downloads:** render a full-length MP4 with H.264/AAC from the same generated plate and untouched MP3, place the verified master on GitHub Releases, and show the direct asset link on the player. If V3 is not yet published, continue displaying the verified V2 download rather than a broken link.

@@ -1,5 +1,6 @@
 import {scoreAt,cropAt,clamp} from './score.js';
 import {IMMUTABLE,PUPPETS,stableNoise,vfxAt} from './vfx.js';
+import {mapCrop} from './motion.js';
 
 const LOOK_FILTER={
  clean:'none',
@@ -21,8 +22,8 @@ function puppetPath(ctx,p,s,W,H,iw,ih){
 }
 /** Deterministic, source-preserving optical compositor. All facial/print regions locked. */
 export class FilmEngine{
- constructor(screen,image){
-  this.screen=screen;this.ctx=screen.getContext('2d',{alpha:false,desynchronized:true});this.image=image;
+ constructor(screen,image,motion=null,guard=null){
+  this.screen=screen;this.ctx=screen.getContext('2d',{alpha:false,desynchronized:true});this.image=image;this.motion=motion;this.guard=guard;
   this.width=0;this.height=0;this.base=null;this.lock=null;this.grain=[];this.scanline=null;this.vignette=null;
  }
  resize(w,h){
@@ -54,8 +55,19 @@ export class FilmEngine{
   const b=this.base.getContext('2d',{alpha:false}),lock=this.lock.getContext('2d',{alpha:false});
   b.globalAlpha=1;b.globalCompositeOperation='source-over';b.filter='none';
   b.fillStyle='#030404';b.fillRect(0,0,W,H);
+  // Frame content comes from moving actors, not camera zoom on a frozen still.
+  // Alpha guard contains the original unmodified faces, board and package.
+  const video=this.motion,guard=this.guard;
+  const animated=!!(video&&video.readyState>=2&&video.videoWidth&&guard?.complete&&guard?.naturalWidth===video.videoWidth&&guard?.naturalHeight===video.videoHeight);
   b.filter='contrast(1.12) saturate(.91)';
-  b.drawImage(img,s.sx,s.sy,s.sw,s.sh,0,0,W,H);b.filter='none';
+  if(animated){
+   const q=mapCrop(s,iw,ih,video.videoWidth,video.videoHeight);
+   b.drawImage(video,q.sx,q.sy,q.sw,q.sh,0,0,W,H);
+   b.filter='none';
+   // Pre-registered first-frame immutable mask: alpha blended, feathered by OpenCV.
+   b.drawImage(guard,q.sx,q.sy,q.sw,q.sh,0,0,W,H);
+  }else b.drawImage(img,s.sx,s.sy,s.sw,s.sh,0,0,W,H);
+  b.filter='none';
   ctx.save();ctx.globalCompositeOperation='source-over';ctx.filter='none';ctx.globalAlpha=1;
   ctx.drawImage(this.base,0,0);
   if(fx.look!=='clean'){
@@ -94,7 +106,7 @@ export class FilmEngine{
   }
   // A restrained 2.5D cut-out echo: original hands, sleeve and sneaker pixels only.
   // Subpixel arc+phase motion, never a recreated face or altered branded product.
-  if(time>2&&time<154){
+  if(!animated&&time>2&&time<154){
    PUPPETS.forEach((p,i)=>{
     const delta=(Math.sin(time*(2.3+i*.3)+p.phase)+fx.shock*.72)*p.amp*W/1920;
     ctx.save();puppetPath(ctx,p,s,W,H,iw,ih);ctx.clip();

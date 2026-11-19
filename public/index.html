@@ -13,6 +13,7 @@
     <header class="masthead"><div class="identity"><i class="identity-mark" aria-hidden="true"></i><span>KHRIYS <b>×</b> GOMONEY</span></div><span class="eyebrow">WALK TO THE BANK <span class="slash">/</span> OFFICIAL VISUALIZER</span></header>
     <main>
       <div class="screen-wrap" id="player">
+        <video class="source-video" id="motion" src="/motion-loop.mp4" playsinline muted loop preload="auto" aria-hidden="true"></video>
         <div class="matte"><canvas id="film" width="1280" height="720" aria-label="Visualizer cinematográfico com a fotografia original de Walk to the Bank"></canvas></div>
         <div class="frame-corner tl"></div><div class="frame-corner tr"></div><div class="frame-corner bl"></div><div class="frame-corner br"></div>
         <button type="button" class="center-play" id="toggle" aria-label="Reproduzir"><svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg><svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg></button>
@@ -26,7 +27,7 @@
         <button type="button" id="fullscreen" class="utility" aria-label="Ecrã inteiro" title="Ecrã inteiro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></button>
       </div>
     </main>
-    <footer><span>02:38 <b>—</b> 24 FPS <b>—</b> CINEMA EDITION</span><a id="save" hidden rel="noopener noreferrer" target="_blank">DOWNLOAD MP4 <span aria-hidden="true">↗</span></a></footer>
+    <footer><span>02:38 <b>—</b> 24 FPS <b>—</b> CINEMA EDITION</span><a id="save" href="https://github.com/edmundokutuzov333/khriys-gomoney/releases/download/visualizer-v2/walk-to-the-bank-v2.mp4" rel="noopener noreferrer" download>DOWNLOAD MP4 <span aria-hidden="true">↗</span></a></footer>
   </div>
   <audio id="audio" src="/walk_to_the_bank.mp3" preload="metadata"></audio>
   <script type="module" src="/src/app.js"></script>

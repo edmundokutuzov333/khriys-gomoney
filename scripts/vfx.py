@@ -122,7 +122,7 @@ class OpticalVFX:
             mixed=cv2.addWeighted(roi,1-amount,shifted,amount,0)
             np.copyto(roi,mixed,where=mask[:,:,None].astype(bool))
 
-    def render(self, original, t:float, beat:float, bass:float, frame_no:int, crop):
+    def render(self, original, t:float, beat:float, bass:float, frame_no:int, crop, moving:bool=False):
         f=self.props(t,beat,bass,frame_no)
         image=self.grade(original,f['look'],f['amount'])
         protected=image.copy()   # authoritative pixels BEFORE spatial effects
@@ -147,7 +147,7 @@ class OpticalVFX:
             mini=cv2.resize(image,(max(8,self.w//7),max(8,self.h//7)),interpolation=cv2.INTER_AREA)
             blur=cv2.resize(cv2.GaussianBlur(mini,(7,7),0),(self.w,self.h),interpolation=cv2.INTER_LINEAR)
             image=cv2.addWeighted(image,1,blur,f['bloom']*.17,0)
-        if 2<t<154:self.puppet(image,t,f['shock'],f['ghost'],crop)
+        if 2<t<154 and not moving:self.puppet(image,t,f['shock'],f['ghost'],crop)
         # Frame-memory echoes: an analogue optical-printer look, never a synthesized person.
         if self.last is not None and (f['ghost']>.10 or (f['glitch'] and frame_no%11<2)):
             image=cv2.addWeighted(image,1-min(.23,f['ghost']*.30),self.last,min(.23,f['ghost']*.30),0)
