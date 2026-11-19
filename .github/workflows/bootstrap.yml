@@ -1,50 +1,108 @@
-name: Import cinema V2 onto main
+name: WALK TO THE BANK V2 — Film Master
+
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/bootstrap.yml']
+    paths:
+      - '.github/workflows/bootstrap.yml'
+      - 'public/src/**'
+      - 'public/index.html'
+      - 'public/cover.png'
+      - 'walk_to_the_bank.mp3'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package.json'
+  workflow_dispatch:
+
 permissions:
   contents: write
+
+concurrency:
+  group: khriys-gomoney-film-v2
+  cancel-in-progress: false
+
 jobs:
-  apply-v2:
+  render-visualizer-v2:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
-      - name: Checkout main
+      - name: Checkout stable main
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-      - name: Import exact reviewed V2 source archive
+      - name: Verify immutable original photograph and music
         run: |
           set -euo pipefail
-          curl -fLsS --retry 4 --retry-all-errors --retry-delay 3 --max-time 180 \
-            'https://at.adobe.com/XUwIdf6sLv3ctADy' -o /tmp/walk-to-bank-v2.zip
-          echo '622d2a51b021095772442b03ffbdba946c9d8644250c2be9ba71c466567e7584  /tmp/walk-to-bank-v2.zip' | sha256sum --check
-          unzip -oq /tmp/walk-to-bank-v2.zip -d .
           test -s public/src/vfx.js
           test -s scripts/vfx.py
-          test -s tests/test_vfx.py
-          echo 'b762e2dec3df181e2e4539791f40886ab422e91f4d621a236399148ccb4cbd66  public/cover.png' | sha256sum --check
           test -s walk_to_the_bank.mp3
-      - name: Python runtime for reproducible offline tests
+          test -s public/ref/59A94530-7BEA-47B4-B697-6A51D9818B43.GIF
+          echo 'b762e2dec3df181e2e4539791f40886ab422e91f4d621a236399148ccb4cbd66  public/cover.png' | sha256sum --check
+      - name: Install pinned Python runtime
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
-      - name: Install pinned free OpenCV and NumPy
-        run: python -m pip install --disable-pip-version-check 'numpy==2.2.6' 'opencv-python-headless==4.11.0.86'
-      - name: Test source, VFX geometry, identity masks and site packaging
+      - name: Install FFmpeg and free optical engines
+        run: |
+          sudo apt-get install -y ffmpeg
+          python -m pip install --disable-pip-version-check 'numpy==2.2.6' 'opencv-python-headless==4.11.0.86'
+          ffmpeg -version | head -1
+      - name: Validate V2 film physics and 18 automated regressions
         run: |
           npm test
           npm run build
-          python -m py_compile scripts/vfx.py scripts/render.py
-          echo 'All verification passed; pushing source files to main.'
-      - name: Atomic source commit on main without workflow permissions
+          python scripts/analyze_audio.py walk_to_the_bank.mp3 --output public/audio-map.json --duration 158
+          python - <<'PY'
+          import json,cv2
+          im=cv2.imread('public/cover.png')
+          assert im is not None and im.shape[:2]==(1280,2048)
+          s=json.load(open('build/score.json'))
+          m=json.load(open('public/audio-map.json'))
+          assert len(s['vfx'])==39 and len(s['protected'])==4 and len(s['puppets'])==3
+          assert m['targetDuration']==158 and 150<m['sourceDuration']<165
+          assert len(m['beats'])>100
+          print('Masks, edit score, real MP3 and 39 VFX cues validated')
+          PY
+      - name: Commit measured beat map changes only
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A -- . ':!.github/workflows'
+          git add public/audio-map.json
           if ! git diff --cached --quiet; then
-            git commit -m 'feat(v2): cinematic body echoes, four underground VFX styles and integrity checks'
+            git commit -m 'chore(v2): synchronize measured percussion map'
             git push origin HEAD:main
+          fi
+      - name: Encode complete 158-second full HD film
+        run: |
+          python scripts/render.py --image public/cover.png --audio walk_to_the_bank.mp3 \
+            --score build/score.json --map public/audio-map.json \
+            --output build/walk-to-the-bank-v2.mp4 \
+            --width 1920 --height 1080 --fps 24 --duration 158 --crf 21 --preset veryfast
+      - name: Forensic media integrity verification
+        run: |
+          python - <<'PY'
+          import json,subprocess,os
+          path='build/walk-to-the-bank-v2.mp4'
+          data=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',path]))
+          video=next(x for x in data['streams'] if x['codec_type']=='video')
+          audio=next(x for x in data['streams'] if x['codec_type']=='audio')
+          assert video['codec_name']=='h264' and audio['codec_name']=='aac'
+          assert (video['width'],video['height'])==(1920,1080)
+          assert int(video['nb_frames'])==3792
+          assert abs(float(data['format']['duration'])-158)<.08
+          assert os.path.getsize(path)>1000000
+          print('Passed: 1920×1080 / 3792 frames / 158 s / H.264 + AAC')
+          PY
+      - name: Publish V2 as a separate downloadable master
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view visualizer-v2 >/dev/null 2>&1; then
+            gh release upload visualizer-v2 build/walk-to-the-bank-v2.mp4 --clobber
+          else
+            gh release create visualizer-v2 build/walk-to-the-bank-v2.mp4 \
+              --target main --title 'WALK TO THE BANK — KHRIYS × GOMONEY / V2' \
+              --notes 'Re-edited 02:38 trap rage visualizer. 39 CRT/night/fire/CCTV VFX passages, source-safe body echoes, preserved original photography. 1080p, 24fps, H.264/AAC. V1 remains available separately.'
           fi
