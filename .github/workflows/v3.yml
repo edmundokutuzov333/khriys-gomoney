@@ -51,3 +51,11 @@ jobs:
           python scripts/guard.py --image public/cover.png --video public/motion-loop.mp4 --score build/score.json --output public/guard.png
           python scripts/analyze_audio.py walk_to_the_bank.mp3 --output public/audio-map.json --duration 158
           npm run build
+      - name: Publish verified V3 sources and footage to main
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md docs/DIRECTION.md package.json vercel.json public/index.html public/src public/motion-loop.mp4 public/guard.png public/audio-map.json scripts/guard.py scripts/render.py scripts/vfx.py tests/test_guard.py tests/test_motion_render.py tests/motion.test.mjs tests/vfx.test.mjs
+          git commit -m 'feat(v3): seamless motion plate and source-preserved film editor'
+          git push origin HEAD:main
