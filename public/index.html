@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070707"><meta name="color-scheme" content="dark">
+  <meta name="description" content="Walk to the Bank — KHRIYS × GOMONEY. Visualizer cinematográfico.">
+  <title>WALK TO THE BANK — KHRIYS × GOMONEY</title>
+  <link rel="preload" href="/cover.png" as="image">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="masthead"><div class="identity"><i class="identity-mark" aria-hidden="true"></i><span>KHRIYS <b>×</b> GOMONEY</span></div><span class="eyebrow">WALK TO THE BANK <span class="slash">/</span> OFFICIAL VISUALIZER</span></header>
+    <main>
+      <div class="screen-wrap" id="player">
+        <div class="matte"><canvas id="film" width="1280" height="720" aria-label="Visualizer cinematográfico com a fotografia original de Walk to the Bank"></canvas></div>
+        <div class="frame-corner tl"></div><div class="frame-corner tr"></div><div class="frame-corner bl"></div><div class="frame-corner br"></div>
+        <button type="button" class="center-play" id="toggle" aria-label="Reproduzir"><svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg><svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg></button>
+        <p id="status" class="status" aria-live="polite"></p>
+      </div>
+      <div class="transport">
+        <span class="statuslight" aria-hidden="true"></span>
+        <label class="sr-only" for="seek">Posição da música</label><input id="seek" type="range" min="0" max="158" value="0" step="0.01">
+        <span class="time" id="clock">00:00 / 02:38</span>
+        <button type="button" id="mute" class="utility" aria-label="Silenciar" title="Silenciar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3zm12-2a7 7 0 0 1 0 10m2-13a11 11 0 0 1 0 16" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></button>
+        <button type="button" id="fullscreen" class="utility" aria-label="Ecrã inteiro" title="Ecrã inteiro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></button>
+      </div>
+    </main>
+    <footer><span>02:38 <b>—</b> 24 FPS <b>—</b> CINEMA EDITION</span><a id="save" hidden rel="noopener noreferrer" target="_blank">DOWNLOAD MP4 <span aria-hidden="true">↗</span></a></footer>
+  </div>
+  <audio id="audio" src="/walk_to_the_bank.mp3" preload="metadata"></audio>
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
