@@ -36,12 +36,15 @@ scripts/
   vfx.py                   matching deterministic optical effects
   analyze_audio.py        original song transient extraction
   export_score.mjs        shared shot/VFX plan
-  prepare.mjs             static MP3 copy for Vercel
+  prepare.mjs             fail-closed original media verification + MP3 copy
 .github/workflows/
-  bootstrap.yml            verified CI → full V3 release
+  bootstrap.yml            legacy V2 release (retained)
+  v3.yml                   permanent V3 test → render → MP4 release
 ```
 
 ## Build and QA
+
+Current tests: **19 JavaScript + 11 Python = 30 passing checks**, plus real-media alignment and video/audio stream validation in CI.
 
 Requires Node 22+, Python 3.12+, FFmpeg, `numpy==2.2.6`, `opencv-python-headless==4.11.0.86`.
 
@@ -62,4 +65,4 @@ Both browser and MP4 retain **independent access** to the original still should 
 - **V3 MP4 download:** https://github.com/edmundokutuzov333/khriys-gomoney/releases/download/visualizer-v3/walk-to-the-bank-v3.mp4
 - **Motion source download:** https://github.com/edmundokutuzov333/khriys-gomoney/releases/download/visualizer-v3/motion-loop.mp4
 
-Github Actions verifies master duration (158s), H.264 video, AAC soundtrack, frame count (3792), dimensions (1920×1080) and playback file presence before release. Only the `main` branch is modified; V1/V2 releases are preserved.
+The V3 code, 10s video and face/text protection matte are now committed directly to main; no production build requires an expiring Magnific link or paid API. GitHub Actions verifies master duration (158s), H.264 video, AAC soundtrack, frame count (3792), dimensions (1920×1080) and playback file presence before release. Only the `main` branch is modified; V1/V2 releases are preserved.
